@@ -1,0 +1,27 @@
+{
+  "id": "vorreth",
+  "name": "Vorreth",
+  "color": "#84cc16",
+  "description": "Bioluminescent organic swarm forces that overwhelm through growth and asymmetry.",
+  "units": [
+    { "id": "spore-crawler", "name": "Spore Crawler", "category": "infantry", "hp": 80, "damage": 8, "speed": 4.8, "vision": 8, "cost": { "metal": 55, "energy": 20, "darkMatter": 0 }, "buildTime": 7, "abilitySlots": ["burrow"], "assetKeyword": "alien spore crawler creature glb" },
+    { "id": "brood-warrior", "name": "Brood Warrior", "category": "infantry", "hp": 145, "damage": 15, "speed": 4.4, "vision": 8, "cost": { "metal": 95, "energy": 30, "darkMatter": 0 }, "buildTime": 10, "abilitySlots": [], "assetKeyword": "alien warrior creature glb" },
+    { "id": "acid-spitter", "name": "Acid Spitter", "category": "infantry", "hp": 115, "damage": 21, "speed": 3.7, "vision": 10, "cost": { "metal": 125, "energy": 45, "darkMatter": 0 }, "buildTime": 13, "abilitySlots": ["acid-pool"], "assetKeyword": "alien acid spitter creature glb" },
+    { "id": "ravager-beast", "name": "Ravager Beast", "category": "vehicle", "hp": 360, "damage": 34, "speed": 3.6, "vision": 9, "cost": { "metal": 260, "energy": 70, "darkMatter": 0 }, "buildTime": 22, "abilitySlots": ["charge"], "assetKeyword": "alien beast monster quadruped glb" },
+    { "id": "hive-flyer", "name": "Hive Flyer", "category": "air", "hp": 180, "damage": 20, "speed": 6.5, "vision": 10, "cost": { "metal": 200, "energy": 120, "darkMatter": 0 }, "buildTime": 19, "abilitySlots": [], "assetKeyword": "alien flying creature glb" },
+    { "id": "colossal-worm", "name": "Colossal Worm", "category": "mech", "hp": 820, "damage": 78, "speed": 2.3, "vision": 11, "cost": { "metal": 680, "energy": 240, "darkMatter": 1 }, "buildTime": 52, "abilitySlots": ["tunnel-breach"], "assetKeyword": "giant alien worm creature glb" },
+    { "id": "parasite-pod", "name": "Parasite Pod", "category": "vehicle", "hp": 190, "damage": 9, "speed": 4.1, "vision": 11, "cost": { "metal": 150, "energy": 80, "darkMatter": 0 }, "buildTime": 16, "abilitySlots": ["infest"], "assetKeyword": "alien parasite pod glb" },
+    { "id": "void-leech", "name": "Void Leech", "category": "air", "hp": 260, "damage": 26, "speed": 5.4, "vision": 12, "cost": { "metal": 280, "energy": 180, "darkMatter": 0 }, "buildTime": 25, "abilitySlots": ["energy-drain"], "assetKeyword": "alien void leech flying glb" }
+  ],
+  "buildings": [
+    { "id": "vorreth-core", "name": "Vorreth Core", "hp": 2350, "cost": { "metal": 900, "energy": 0, "darkMatter": 0 }, "buildTime": 45, "produces": { "zoneControl": 20 }, "assetKeyword": "alien hive core building glb" },
+    { "id": "bio-reactor", "name": "Bio-Reactor", "hp": 650, "cost": { "metal": 160, "energy": 0, "darkMatter": 0 }, "buildTime": 17, "produces": { "energy": 22 }, "assetKeyword": "organic alien reactor building glb" },
+    { "id": "mineral-tendril", "name": "Mineral Tendril", "hp": 700, "cost": { "metal": 210, "energy": 30, "darkMatter": 0 }, "buildTime": 21, "produces": { "metal": 17 }, "assetKeyword": "alien mineral extractor tendril glb" },
+    { "id": "spawning-pit", "name": "Spawning Pit", "hp": 880, "cost": { "metal": 280, "energy": 90, "darkMatter": 0 }, "buildTime": 28, "produces": { "units": ["infantry"] }, "assetKeyword": "alien spawning pit glb" },
+    { "id": "growth-chamber", "name": "Growth Chamber", "hp": 1020, "cost": { "metal": 380, "energy": 140, "darkMatter": 0 }, "buildTime": 35, "produces": { "units": ["vehicle", "mech"] }, "assetKeyword": "alien organic growth chamber glb" },
+    { "id": "spore-launch-pad", "name": "Spore Launch Pad", "hp": 820, "cost": { "metal": 330, "energy": 190, "darkMatter": 0 }, "buildTime": 33, "produces": { "units": ["air"] }, "assetKeyword": "alien spore launch building glb" },
+    { "id": "evolution-shrine", "name": "Evolution Shrine", "hp": 760, "cost": { "metal": 360, "energy": 260, "darkMatter": 0 }, "buildTime": 40, "produces": { "tech": 1 }, "assetKeyword": "alien evolution shrine glb" },
+    { "id": "thorn-barrier", "name": "Thorn Barrier", "hp": 680, "cost": { "metal": 210, "energy": 70, "darkMatter": 0 }, "buildTime": 18, "produces": { "defense": 1 }, "assetKeyword": "alien thorn defense turret glb" },
+    { "id": "dark-matter-node-tap", "name": "Dark Matter Node Tap", "hp": 820, "cost": { "metal": 500, "energy": 330, "darkMatter": 0 }, "buildTime": 46, "produces": { "darkMatter": 0.08 }, "assetKeyword": "alien dark matter node tap glb" }
+  ]
+}

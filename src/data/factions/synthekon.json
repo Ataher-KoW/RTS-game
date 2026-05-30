@@ -1,0 +1,195 @@
+{
+  "id": "synthekon",
+  "name": "Synthekon",
+  "color": "#7dd3fc",
+  "description": "Clean chrome android forces with precise, expensive, high-efficiency units.",
+  "units": [
+    {
+      "id": "scout-drone",
+      "name": "Scout Drone",
+      "category": "air",
+      "hp": 70,
+      "damage": 5,
+      "speed": 7.2,
+      "vision": 13,
+      "cost": { "metal": 70, "energy": 45, "darkMatter": 0 },
+      "buildTime": 8,
+      "abilitySlots": ["scan-pulse"],
+      "assetKeyword": "sci fi scout drone glb"
+    },
+    {
+      "id": "rifle-android",
+      "name": "Rifle Android",
+      "category": "infantry",
+      "hp": 120,
+      "damage": 12,
+      "speed": 4.2,
+      "vision": 9,
+      "cost": { "metal": 95, "energy": 30, "darkMatter": 0 },
+      "buildTime": 10,
+      "abilitySlots": [],
+      "assetKeyword": "robot rifle soldier glb"
+    },
+    {
+      "id": "heavy-mech",
+      "name": "Heavy Mech",
+      "category": "mech",
+      "hp": 420,
+      "damage": 38,
+      "speed": 2.8,
+      "vision": 10,
+      "cost": { "metal": 310, "energy": 140, "darkMatter": 0 },
+      "buildTime": 24,
+      "abilitySlots": ["stabilize"],
+      "assetKeyword": "heavy combat mech robot glb"
+    },
+    {
+      "id": "hover-tank",
+      "name": "Hover Tank",
+      "category": "vehicle",
+      "hp": 300,
+      "damage": 30,
+      "speed": 3.8,
+      "vision": 10,
+      "cost": { "metal": 260, "energy": 110, "darkMatter": 0 },
+      "buildTime": 20,
+      "abilitySlots": [],
+      "assetKeyword": "sci fi hover tank glb"
+    },
+    {
+      "id": "gunship",
+      "name": "Gunship",
+      "category": "air",
+      "hp": 240,
+      "damage": 28,
+      "speed": 6,
+      "vision": 11,
+      "cost": { "metal": 240, "energy": 180, "darkMatter": 0 },
+      "buildTime": 22,
+      "abilitySlots": ["evasive-burn"],
+      "assetKeyword": "sci fi gunship aircraft glb"
+    },
+    {
+      "id": "titan-mech",
+      "name": "Titan Mech",
+      "category": "mech",
+      "hp": 900,
+      "damage": 85,
+      "speed": 2.1,
+      "vision": 12,
+      "cost": { "metal": 760, "energy": 420, "darkMatter": 1 },
+      "buildTime": 55,
+      "abilitySlots": ["mech-stomp", "shield-burst"],
+      "assetKeyword": "giant sci fi mech robot glb"
+    },
+    {
+      "id": "android-swarm",
+      "name": "Android Swarm",
+      "category": "infantry",
+      "hp": 65,
+      "damage": 7,
+      "speed": 5.4,
+      "vision": 8,
+      "cost": { "metal": 55, "energy": 35, "darkMatter": 0 },
+      "buildTime": 6,
+      "abilitySlots": ["overclock"],
+      "assetKeyword": "small robot swarm android glb"
+    },
+    {
+      "id": "rail-cannon-vehicle",
+      "name": "Rail Cannon Vehicle",
+      "category": "vehicle",
+      "hp": 360,
+      "damage": 68,
+      "speed": 2.6,
+      "vision": 13,
+      "cost": { "metal": 430, "energy": 210, "darkMatter": 0 },
+      "buildTime": 34,
+      "abilitySlots": ["deploy-rails"],
+      "assetKeyword": "sci fi railgun vehicle glb"
+    }
+  ],
+  "buildings": [
+    {
+      "id": "synthekon-hq",
+      "name": "Synthekon HQ",
+      "hp": 2200,
+      "cost": { "metal": 900, "energy": 0, "darkMatter": 0 },
+      "buildTime": 45,
+      "produces": { "zoneControl": 20 },
+      "assetKeyword": "sci fi robot command center glb"
+    },
+    {
+      "id": "power-conduit",
+      "name": "Power Conduit",
+      "hp": 650,
+      "cost": { "metal": 180, "energy": 0, "darkMatter": 0 },
+      "buildTime": 18,
+      "produces": { "energy": 24 },
+      "assetKeyword": "sci fi power generator glb"
+    },
+    {
+      "id": "metal-harvester",
+      "name": "Metal Harvester",
+      "hp": 720,
+      "cost": { "metal": 220, "energy": 40, "darkMatter": 0 },
+      "buildTime": 22,
+      "produces": { "metal": 18 },
+      "assetKeyword": "futuristic mining extractor glb"
+    },
+    {
+      "id": "android-foundry",
+      "name": "Android Foundry",
+      "hp": 900,
+      "cost": { "metal": 310, "energy": 120, "darkMatter": 0 },
+      "buildTime": 30,
+      "produces": { "units": ["infantry"] },
+      "assetKeyword": "robot factory building glb"
+    },
+    {
+      "id": "vehicle-assembly",
+      "name": "Vehicle Assembly",
+      "hp": 1050,
+      "cost": { "metal": 420, "energy": 180, "darkMatter": 0 },
+      "buildTime": 36,
+      "produces": { "units": ["vehicle"] },
+      "assetKeyword": "sci fi vehicle factory glb"
+    },
+    {
+      "id": "aero-bay",
+      "name": "Aero Bay",
+      "hp": 860,
+      "cost": { "metal": 360, "energy": 240, "darkMatter": 0 },
+      "buildTime": 34,
+      "produces": { "units": ["air"] },
+      "assetKeyword": "sci fi aircraft hangar glb"
+    },
+    {
+      "id": "research-nexus",
+      "name": "Research Nexus",
+      "hp": 760,
+      "cost": { "metal": 390, "energy": 290, "darkMatter": 0 },
+      "buildTime": 42,
+      "produces": { "tech": 1 },
+      "assetKeyword": "futuristic research lab glb"
+    },
+    {
+      "id": "defense-turret",
+      "name": "Defense Turret",
+      "hp": 620,
+      "cost": { "metal": 220, "energy": 90, "darkMatter": 0 },
+      "buildTime": 20,
+      "produces": { "defense": 1 },
+      "assetKeyword": "sci fi laser turret glb"
+    },
+    {
+      "id": "dark-matter-siphon",
+      "name": "Dark Matter Siphon",
+      "hp": 840,
+      "cost": { "metal": 520, "energy": 360, "darkMatter": 0 },
+      "buildTime": 48,
+      "produces": { "darkMatter": 0.08 },
+      "assetKeyword": "dark matter extractor sci fi glb"
+    }
+  ]
+}

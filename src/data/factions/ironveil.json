@@ -1,0 +1,27 @@
+{
+  "id": "ironveil",
+  "name": "Ironveil",
+  "color": "#f97316",
+  "description": "Human future-tech military built around utilitarian armor, logistics, and energy weapons.",
+  "units": [
+    { "id": "ranger-infantry", "name": "Ranger Infantry", "category": "infantry", "hp": 100, "damage": 10, "speed": 4.5, "vision": 9, "cost": { "metal": 70, "energy": 20, "darkMatter": 0 }, "buildTime": 8, "abilitySlots": ["sprint"], "assetKeyword": "future soldier infantry glb" },
+    { "id": "laser-trooper", "name": "Laser Trooper", "category": "infantry", "hp": 115, "damage": 17, "speed": 4, "vision": 9, "cost": { "metal": 110, "energy": 45, "darkMatter": 0 }, "buildTime": 11, "abilitySlots": [], "assetKeyword": "sci fi laser trooper glb" },
+    { "id": "armored-ifv", "name": "Armored IFV", "category": "vehicle", "hp": 280, "damage": 24, "speed": 4.1, "vision": 10, "cost": { "metal": 230, "energy": 75, "darkMatter": 0 }, "buildTime": 20, "abilitySlots": ["deploy-infantry"], "assetKeyword": "sci fi armored ifv vehicle glb" },
+    { "id": "plasma-tank", "name": "Plasma Tank", "category": "vehicle", "hp": 420, "damage": 42, "speed": 3.1, "vision": 10, "cost": { "metal": 360, "energy": 160, "darkMatter": 0 }, "buildTime": 28, "abilitySlots": [], "assetKeyword": "sci fi plasma tank glb" },
+    { "id": "attack-vtol", "name": "Attack VTOL", "category": "air", "hp": 230, "damage": 29, "speed": 6.2, "vision": 11, "cost": { "metal": 250, "energy": 170, "darkMatter": 0 }, "buildTime": 23, "abilitySlots": ["strafe-run"], "assetKeyword": "sci fi attack vtol aircraft glb" },
+    { "id": "siege-walker", "name": "Siege Walker", "category": "mech", "hp": 680, "damage": 72, "speed": 2.2, "vision": 12, "cost": { "metal": 620, "energy": 300, "darkMatter": 1 }, "buildTime": 48, "abilitySlots": ["siege-mode"], "assetKeyword": "sci fi siege walker mech glb" },
+    { "id": "emp-drone", "name": "EMP Drone", "category": "air", "hp": 90, "damage": 4, "speed": 6.8, "vision": 12, "cost": { "metal": 120, "energy": 95, "darkMatter": 0 }, "buildTime": 14, "abilitySlots": ["emp-burst"], "assetKeyword": "sci fi emp drone glb" },
+    { "id": "railgun-platform", "name": "Railgun Platform", "category": "vehicle", "hp": 340, "damage": 70, "speed": 2.4, "vision": 13, "cost": { "metal": 430, "energy": 220, "darkMatter": 0 }, "buildTime": 34, "abilitySlots": ["deploy-rails"], "assetKeyword": "future railgun artillery vehicle glb" }
+  ],
+  "buildings": [
+    { "id": "ironveil-command", "name": "Ironveil Command", "hp": 2300, "cost": { "metal": 900, "energy": 0, "darkMatter": 0 }, "buildTime": 45, "produces": { "zoneControl": 20 }, "assetKeyword": "future military command center glb" },
+    { "id": "power-station", "name": "Power Station", "hp": 680, "cost": { "metal": 170, "energy": 0, "darkMatter": 0 }, "buildTime": 18, "produces": { "energy": 23 }, "assetKeyword": "sci fi military power station glb" },
+    { "id": "ore-processor", "name": "Ore Processor", "hp": 740, "cost": { "metal": 220, "energy": 45, "darkMatter": 0 }, "buildTime": 22, "produces": { "metal": 18 }, "assetKeyword": "future ore processor building glb" },
+    { "id": "infantry-barracks", "name": "Infantry Barracks", "hp": 920, "cost": { "metal": 300, "energy": 100, "darkMatter": 0 }, "buildTime": 29, "produces": { "units": ["infantry"] }, "assetKeyword": "future military barracks glb" },
+    { "id": "tank-foundry", "name": "Tank Foundry", "hp": 1080, "cost": { "metal": 410, "energy": 170, "darkMatter": 0 }, "buildTime": 36, "produces": { "units": ["vehicle"] }, "assetKeyword": "sci fi tank factory glb" },
+    { "id": "vtol-hangar", "name": "VTOL Hangar", "hp": 860, "cost": { "metal": 350, "energy": 230, "darkMatter": 0 }, "buildTime": 34, "produces": { "units": ["air"] }, "assetKeyword": "sci fi vtol hangar glb" },
+    { "id": "tech-lab", "name": "Tech Lab", "hp": 760, "cost": { "metal": 370, "energy": 280, "darkMatter": 0 }, "buildTime": 40, "produces": { "tech": 1 }, "assetKeyword": "future military tech lab glb" },
+    { "id": "missile-tower", "name": "Missile Tower", "hp": 650, "cost": { "metal": 230, "energy": 85, "darkMatter": 0 }, "buildTime": 20, "produces": { "defense": 1 }, "assetKeyword": "sci fi missile defense tower glb" },
+    { "id": "dark-matter-extractor", "name": "Dark Matter Extractor", "hp": 840, "cost": { "metal": 520, "energy": 350, "darkMatter": 0 }, "buildTime": 48, "produces": { "darkMatter": 0.08 }, "assetKeyword": "future dark matter extractor glb" }
+  ]
+}
