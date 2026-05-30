@@ -46,6 +46,7 @@ export class Terrain {
       geometry,
       new THREE.MeshStandardMaterial({
         color: 0x1b332f,
+        map: this.createTerrainTexture(),
         roughness: 0.88,
         metalness: 0.02,
       }),
@@ -71,6 +72,37 @@ export class Terrain {
     grid.position.y = 0.05;
 
     return { terrain, water, grid };
+  }
+
+  createTerrainTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    const image = context.createImageData(canvas.width, canvas.height);
+    for (let y = 0; y < canvas.height; y += 1) {
+      for (let x = 0; x < canvas.width; x += 1) {
+        const nx = x / canvas.width - 0.5;
+        const ny = y / canvas.height - 0.5;
+        const ridge = Math.sin((nx + ny) * 38 + this.terrainSeed) * 0.5 + 0.5;
+        const speckle = Math.sin(x * 0.37 + y * 0.23) * 0.5 + 0.5;
+        const crater = Math.max(0, 1 - Math.hypot(nx, ny) * 2.4);
+        const rock = ridge * 46 + speckle * 18;
+        const green = 48 + ridge * 34 - crater * 16;
+        const offset = (y * canvas.width + x) * 4;
+        image.data[offset] = 24 + rock * 0.45 + crater * 22;
+        image.data[offset + 1] = green + rock * 0.18;
+        image.data[offset + 2] = 42 + rock * 0.35 + crater * 34;
+        image.data[offset + 3] = 255;
+      }
+    }
+    context.putImageData(image, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(8, 8);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
   }
 
   heightAt(x, z) {

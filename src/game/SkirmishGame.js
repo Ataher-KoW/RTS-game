@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { AssetLibrary } from './AssetLibrary.js';
 import { AudioBus } from './AudioBus.js';
 import { CameraController } from './CameraController.js';
@@ -43,6 +46,7 @@ export class SkirmishGame {
     this.nextEntityId = 1;
     this.entities = new Map();
     this.rubble = [];
+    this.resourceNodes = [];
     this.selectedIds = new Set();
     this.pickables = [];
     this.warnings = [];
@@ -95,6 +99,12 @@ export class SkirmishGame {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.container.append(this.renderer.domElement);
+    this.composer = new EffectComposer(this.renderer);
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.52, 0.42, 0.78);
+    this.composer.addPass(this.renderPass);
+    this.composer.addPass(this.bloomPass);
+    this.postProcessingEnabled = true;
 
     this.raycaster = new THREE.Raycaster();
     this.pointerNdc = new THREE.Vector2();
@@ -219,6 +229,7 @@ export class SkirmishGame {
     mesh.rotation.x = type === 'tunnel' ? Math.PI / 2 : 0;
     mesh.castShadow = true;
     this.scene.add(mesh);
+    this.resourceNodes.push({ mesh, type, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2 });
   }
 
   bindInput() {
@@ -537,7 +548,7 @@ export class SkirmishGame {
 
   update(delta) {
     if (this.matchEnded) {
-      this.renderer.render(this.scene, this.camera);
+      this.renderFrame();
       return;
     }
 
@@ -556,6 +567,7 @@ export class SkirmishGame {
     this.updateAI(delta);
     this.updateVisibility();
     this.updateVisuals(delta);
+    this.updateEnvironment(delta);
     this.instancedLod.update([...this.entities.values()], this.camera, this.selectedIds);
     this.particles.update(delta, this.camera);
     this.updateHud();
@@ -563,7 +575,7 @@ export class SkirmishGame {
       this.nextAutosaveAt += 300;
       this.hooks.onAutosave?.(this.exportSave('autosave'));
     }
-    this.renderer.render(this.scene, this.camera);
+    this.renderFrame();
   }
 
   updateResources(delta) {
@@ -1427,6 +1439,20 @@ export class SkirmishGame {
     }
   }
 
+  updateEnvironment(delta) {
+    for (const node of this.resourceNodes) {
+      node.mesh.rotation.y += delta * (node.type === 'darkMatter' ? 0.8 : 0.22);
+      if (node.type === 'darkMatter') {
+        const pulse = 0.5 + Math.sin(this.elapsed * 2.2 + node.phase) * 0.28;
+        node.mesh.position.y = node.baseY + pulse * 0.22;
+        if (node.mesh.material?.emissiveIntensity !== undefined) {
+          node.mesh.material.emissiveIntensity = 0.6 + pulse * 0.8;
+        }
+      }
+    }
+    this.waterMesh.material.opacity = 0.42 + Math.sin(this.elapsed * 0.65) * 0.04;
+  }
+
   updateHud() {
     this.hooks.onState?.({
       elapsed: this.elapsed,
@@ -1678,14 +1704,15 @@ export class SkirmishGame {
     this.settings = { ...this.settings, ...settings };
     const quality = this.settings.graphicsQuality || 'high';
     const presets = {
-      low: { pixelRatio: 1, particles: 220, shadows: false },
-      medium: { pixelRatio: 1.4, particles: 420, shadows: true },
-      high: { pixelRatio: Math.min(window.devicePixelRatio, 2), particles: 760, shadows: true },
+      low: { pixelRatio: 1, particles: 220, shadows: false, bloom: false },
+      medium: { pixelRatio: 1.4, particles: 420, shadows: true, bloom: true },
+      high: { pixelRatio: Math.min(window.devicePixelRatio, 2), particles: 760, shadows: true, bloom: true },
     };
     const preset = presets[quality] || presets.high;
     if (this.renderer) {
       this.renderer.setPixelRatio(preset.pixelRatio);
       this.renderer.shadowMap.enabled = preset.shadows;
+      this.postProcessingEnabled = preset.bloom;
       this.resize();
     }
     this.particles?.setBudget(preset.particles);
@@ -2149,15 +2176,27 @@ export class SkirmishGame {
     };
   }
 
+  renderFrame() {
+    if (this.postProcessingEnabled) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
+  }
+
   resize() {
     const { clientWidth, clientHeight } = this.container;
     this.camera.aspect = clientWidth / Math.max(clientHeight, 1);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(clientWidth, clientHeight, false);
+    this.composer.setSize(clientWidth, clientHeight);
+    this.bloomPass.setSize(clientWidth, clientHeight);
   }
 
   dispose() {
     this.resizeObserver.disconnect();
+    this.particles.clear();
+    this.composer.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
