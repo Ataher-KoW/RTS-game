@@ -256,4 +256,6 @@ window.atStrategyGame = {
   get state() {
     return latestState;
   },
+  snapshot: () => game.getSnapshot(),
+  runAcceptanceProbe: () => game.runAcceptanceProbe(),
 };
