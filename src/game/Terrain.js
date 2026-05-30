@@ -1,24 +1,33 @@
 import * as THREE from 'three';
 
 export class Terrain {
-  constructor({ size = 96, segments = 96, waterLevel = -0.42 } = {}) {
+  constructor({ size = 96, segments = 96, map = null, waterLevel = map?.waterLevel ?? -0.42 } = {}) {
     this.size = size;
     this.half = size / 2;
     this.segments = segments;
+    this.map = map;
+    this.terrainSeed = map?.terrainSeed ?? 1;
     this.waterLevel = waterLevel;
     this.gridSize = 48;
     this.cellSize = size / this.gridSize;
-    this.metalDeposits = [
-      new THREE.Vector3(-30, 0, -19),
-      new THREE.Vector3(-24, 0, 17),
-      new THREE.Vector3(-12, 0, -31),
-      new THREE.Vector3(24, 0, -18),
-      new THREE.Vector3(30, 0, 19),
-      new THREE.Vector3(12, 0, 31),
-    ].map((node) => this.placeOnGround(node));
-    this.darkMatterNodes = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(6, 0, 4)].map((node) =>
-      this.placeOnGround(node),
-    );
+    this.metalDeposits = (map?.metalDeposits ?? [
+      [-30, -19],
+      [-24, 17],
+      [-12, -31],
+      [24, -18],
+      [30, 19],
+      [12, 31],
+    ]).map(([x, z]) => this.placeOnGround(new THREE.Vector3(x, 0, z)));
+    this.darkMatterNodes = (map?.darkMatterNodes ?? [
+      [0, 0],
+      [6, 4],
+    ]).map(([x, z]) => this.placeOnGround(new THREE.Vector3(x, 0, z)));
+    this.tunnelAnchors = (map?.tunnelAnchors ?? [
+      [-34, 24],
+      [34, -24],
+      [-6, -30],
+      [6, 30],
+    ]).map(([x, z]) => this.placeOnGround(new THREE.Vector3(x, 0, z)));
   }
 
   createMeshes() {
@@ -65,11 +74,37 @@ export class Terrain {
   }
 
   heightAt(x, z) {
-    const ridge = Math.exp(-Math.abs(x + z * 0.18) / 18) * 1.35;
-    const basin = Math.exp(-((x - 15) ** 2 + (z + 8) ** 2) / 380) * -1.4;
-    const waves = Math.sin(x * 0.18) * 0.55 + Math.cos(z * 0.14) * 0.45;
-    const ramp = Math.sin((x - z) * 0.055) * 0.8;
-    return waves + ramp + ridge + basin - 0.35;
+    let base;
+    if (this.terrainSeed === 2) {
+      const channels = Math.sin((x + z) * 0.08) * 0.95 - Math.cos(z * 0.16) * 0.55;
+      const deltaBasin = Math.exp(-(x ** 2) / 180) * -0.9;
+      const shelves = Math.sin(x * 0.11) * 0.35 + Math.cos(z * 0.09) * 0.35;
+      base = channels + deltaBasin + shelves - 0.2;
+    } else if (this.terrainSeed === 3) {
+      const crater = Math.exp(-(x ** 2 + z ** 2) / 190) * -2.0;
+      const rim = Math.exp(-Math.abs(Math.hypot(x, z) - 22) / 8) * 1.35;
+      const ramps = Math.sin((x - z) * 0.06) * 0.65 + Math.cos((x + z) * 0.05) * 0.4;
+      base = crater + rim + ramps - 0.15;
+    } else {
+      const ridge = Math.exp(-Math.abs(x + z * 0.18) / 18) * 1.35;
+      const basin = Math.exp(-((x - 15) ** 2 + (z + 8) ** 2) / 380) * -1.4;
+      const waves = Math.sin(x * 0.18) * 0.55 + Math.cos(z * 0.14) * 0.45;
+      const ramp = Math.sin((x - z) * 0.055) * 0.8;
+      base = waves + ramp + ridge + basin - 0.35;
+    }
+
+    for (const crater of this.craters || []) {
+      const distance = Math.hypot(x - crater.center.x, z - crater.center.z);
+      if (distance < crater.radius) {
+        base -= (1 - distance / crater.radius) * crater.depth;
+      }
+    }
+    return base;
+  }
+
+  deformCrater(center, radius = 7, depth = 0.9) {
+    this.craters ??= [];
+    this.craters.push({ center: center.clone(), radius, depth });
   }
 
   slopeAt(x, z) {
