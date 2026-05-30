@@ -43,6 +43,13 @@ button:hover {
   background: rgba(14, 116, 144, 0.75);
 }
 
+button:disabled {
+  border-color: rgba(71, 85, 105, 0.45);
+  color: #64748b;
+  background: rgba(15, 23, 42, 0.48);
+  cursor: not-allowed;
+}
+
 button span {
   overflow: hidden;
   font-size: 0.74rem;
@@ -130,7 +137,8 @@ button small {
   color: #fca5a5;
 }
 
-.superweapon-bar {
+.superweapon-bar,
+.superweapon-panel {
   position: absolute;
   top: 64px;
   left: 50%;
@@ -143,6 +151,62 @@ button small {
   color: #ddd6fe;
   font-size: 0.78rem;
   transform: translateX(-50%);
+}
+
+.superweapon-panel {
+  top: 104px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(86px, 1fr));
+  gap: 6px;
+  width: min(560px, calc(100% - 24px));
+  padding: 8px;
+}
+
+.superweapon-panel button {
+  min-height: 46px;
+}
+
+.setup-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.74);
+}
+
+.setup-panel > div {
+  display: grid;
+  gap: 12px;
+  width: min(420px, calc(100% - 28px));
+  padding: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(7, 16, 24, 0.94);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.setup-panel strong {
+  color: #f8fafc;
+  font-size: 1.7rem;
+}
+
+.setup-panel label {
+  display: grid;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.setup-panel select {
+  min-height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  color: #e5f1ff;
+  background: #0f172a;
+  font: inherit;
+  text-transform: none;
 }
 
 .superweapon-bar div {
@@ -208,6 +272,21 @@ button small {
   width: 8px;
   height: 8px;
   border-radius: 2px;
+}
+
+.dot.tunnel {
+  background: #22d3ee;
+}
+
+.tunnel-line {
+  position: absolute;
+  height: 0;
+  border-top: 2px dotted rgba(34, 211, 238, 0.55);
+  transform-origin: 0 0;
+}
+
+.tunnel-line.ai {
+  border-color: rgba(251, 113, 133, 0.5);
 }
 
 .selection-panel {
