@@ -52,7 +52,7 @@ export const BUILDING_META = {
     trains: ['scout-drone', 'gunship'],
     energyUse: 8,
   },
-  'research-nexus': { armor: 'structure', footprint: 4, zoneControl: 10, trains: [], energyUse: 10 },
+  'research-nexus': { armor: 'structure', footprint: 4, zoneControl: 10, trains: ['titan-mech'], energyUse: 10 },
   'defense-turret': {
     armor: 'structure',
     footprint: 2,
@@ -80,6 +80,7 @@ export const BUILD_ORDER = [
   'android-foundry',
   'vehicle-assembly',
   'aero-bay',
+  'research-nexus',
   'defense-turret',
   'dark-matter-siphon',
 ];
