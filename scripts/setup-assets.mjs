@@ -29,6 +29,8 @@ const audioTargets = [
   { id: 'sfx-unit-select', keyword: 'robot unit select beep' },
   { id: 'sfx-move-confirm', keyword: 'sci fi command confirm' },
   { id: 'sfx-veteran', keyword: 'short rank up chime' },
+  { id: 'music-calm-ambient', keyword: 'royalty free sci fi ambient loop calm base building' },
+  { id: 'music-intense-combat', keyword: 'royalty free sci fi combat loop intense battle' },
 ];
 
 await log(`setup start: ${targets.length} model targets, ${audioTargets.length} audio targets`);
@@ -64,8 +66,19 @@ await writeFile(manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`);
 await copyFile(manifestPath, publicManifestPath);
 await log(`setup complete: manifest wrote ${nextManifest.assets.length} entries`);
 
+const summary = summarize(nextManifest.assets);
 console.log(`Asset cache ready: ${cacheDir}`);
 console.log(`Manifest mirrored to: ${publicManifestPath}`);
+console.log(`Models fetched: ${summary.modelsReady}`);
+console.log(`Audio fetched: ${summary.audioReady}`);
+console.log(`Fallbacks used: ${summary.fallbacks}`);
+console.log(`Failed: ${summary.failed}`);
+if (summary.fallbackKeywords.length > 0) {
+  console.log('Fallback keywords:');
+  for (const keyword of summary.fallbackKeywords) {
+    console.log(`- ${keyword}`);
+  }
+}
 
 async function collectAssetTargets() {
   const files = ['synthekon.json', 'vorreth.json', 'ironveil.json'];
@@ -306,4 +319,17 @@ async function exists(filePath) {
 
 async function log(message) {
   await appendFile(logPath, `[${new Date().toISOString()}] ${message}\n`);
+}
+
+function summarize(assets) {
+  const ready = assets.filter((asset) => asset.status === 'ready');
+  const fallbacks = assets.filter((asset) => asset.status === 'placeholder');
+  const failed = assets.filter((asset) => asset.status !== 'ready' && asset.status !== 'placeholder');
+  return {
+    modelsReady: ready.filter((asset) => asset.kind !== 'audio').length,
+    audioReady: ready.filter((asset) => asset.kind === 'audio').length,
+    fallbacks: fallbacks.length,
+    failed: failed.length,
+    fallbackKeywords: fallbacks.map((asset) => `${asset.id}: ${asset.keyword || asset.provider || 'procedural fallback'}`),
+  };
 }
