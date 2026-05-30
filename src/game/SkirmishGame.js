@@ -1589,8 +1589,14 @@ export class SkirmishGame {
       const abilityUnit = this.spawnAbilityProbeUnit(OWNER.PLAYER);
       assert('ability unit available', Boolean(abilityUnit));
       if (abilityUnit) {
-        const used = this.useAbility(abilityUnit, abilityUnit.abilitySlots[0]);
-        assert('active ability fires', used && abilityUnit.abilityCooldowns[abilityUnit.abilitySlots[0]] > 0);
+        const abilityId = abilityUnit.abilitySlots[0];
+        abilityUnit.abilityCooldowns[abilityId] = 0;
+        const used = this.useAbility(abilityUnit, abilityId);
+        assert(
+          'active ability fires',
+          used && abilityUnit.abilityCooldowns[abilityId] > 0,
+          `${abilityUnit.defId}:${abilityId}:${used}:${abilityUnit.abilityCooldowns[abilityId]}`,
+        );
       }
 
       const enemyBlob = this.spawnUnit(targetUnitId, OWNER.AI, new THREE.Vector3(0, 0, 0));

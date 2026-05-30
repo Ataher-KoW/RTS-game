@@ -339,7 +339,7 @@ export function getFactionData(factionId = 'synthekon') {
         ...unit,
         ...CATEGORY_META[unit.category],
         ...UNIT_OVERRIDES[unit.id],
-        abilitySlots: config.abilityUnits[unit.id] || unit.abilitySlots || [],
+        abilitySlots: config.abilityUnits[unit.id] || [],
         maxHp: unit.hp,
       },
     ]),
