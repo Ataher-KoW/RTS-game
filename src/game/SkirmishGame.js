@@ -4,6 +4,7 @@ import { AudioBus } from './AudioBus.js';
 import { CameraController } from './CameraController.js';
 import { FlowFieldManager } from './FlowField.js';
 import { FogOfWar } from './FogOfWar.js';
+import { InstancedLodRenderer } from './InstancedLodRenderer.js';
 import {
   BUILD_ORDER,
   ENTITY_KIND,
@@ -77,6 +78,7 @@ export class SkirmishGame {
     this.audio = new AudioBus();
     this.assetLibrary = new AssetLibrary({ onWarning: (message) => this.warn(message) });
     this.particles = new ParticleSystem(this.scene, this.terrain);
+    this.instancedLod = new InstancedLodRenderer(this.scene);
 
     this.setupScene();
     this.cameraController = new CameraController(this.camera, this.renderer.domElement, this.terrain);
@@ -711,6 +713,7 @@ export class SkirmishGame {
     this.updateAI(delta);
     this.updateVisibility();
     this.updateVisuals(delta);
+    this.instancedLod.update([...this.entities.values()], this.camera, this.selectedIds);
     this.particles.update(delta, this.camera);
     this.updateHud();
     this.renderer.render(this.scene, this.camera);
@@ -1049,9 +1052,11 @@ export class SkirmishGame {
     this.fog.update(playerSources);
     for (const entity of this.entities.values()) {
       if (entity.owner !== OWNER.AI) {
+        entity.renderVisible = true;
         continue;
       }
       const visible = this.fog.isVisible(entity.position);
+      entity.renderVisible = visible;
       entity.visual.visible = visible;
       entity.hpBar.group.visible = visible;
       entity.selectionRing.visible = visible && this.selectedIds.has(entity.id);
