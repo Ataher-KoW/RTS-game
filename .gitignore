@@ -18,6 +18,7 @@ pnpm-debug.log*
 assets/cache/
 assets/**/*.tmp
 assets/**/*.log
+public/asset-cache/
 
 *.local
 *.tsbuildinfo
