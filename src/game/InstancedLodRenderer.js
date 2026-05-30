@@ -14,6 +14,7 @@ export class InstancedLodRenderer {
   constructor(scene) {
     this.scene = scene;
     this.batches = new Map();
+    this.farLodDistance = FAR_LOD_DISTANCE;
     this.matrix = new THREE.Matrix4();
     this.quaternion = new THREE.Quaternion();
     this.scale = new THREE.Vector3(1, 1, 1);
@@ -34,7 +35,7 @@ export class InstancedLodRenderer {
 
       const allowed = entity.renderVisible !== false;
       const selected = selectedIds.has(entity.id);
-      const far = entity.position.distanceTo(camera.position) > FAR_LOD_DISTANCE && !selected;
+      const far = entity.position.distanceTo(camera.position) > this.farLodDistance && !selected;
       entity.usingInstancedLod = allowed && far;
 
       if (!entity.usingInstancedLod) {
@@ -65,6 +66,14 @@ export class InstancedLodRenderer {
       batch.mesh.visible = batch.count > 0;
       batch.mesh.instanceMatrix.needsUpdate = true;
     }
+  }
+
+  setQuality(quality = 'high') {
+    this.farLodDistance = {
+      low: 34,
+      medium: 48,
+      high: FAR_LOD_DISTANCE,
+    }[quality] || FAR_LOD_DISTANCE;
   }
 
   getBatch(entity) {

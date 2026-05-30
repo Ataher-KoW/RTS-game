@@ -42,6 +42,7 @@ export class SkirmishGame {
     this.matchResult = null;
     this.nextEntityId = 1;
     this.entities = new Map();
+    this.rubble = [];
     this.selectedIds = new Set();
     this.pickables = [];
     this.warnings = [];
@@ -50,6 +51,22 @@ export class SkirmishGame {
     this.attackMoveArmed = false;
     this.drag = null;
     this.activeSuperweapons = [];
+    this.activeCombatCount = 0;
+    this.nextAutosaveAt = 300;
+    this.settings = {
+      graphicsQuality: 'high',
+      musicVolume: 0.42,
+      sfxVolume: 0.78,
+      fullscreen: false,
+      resolution: '1280x800',
+      ...options.settings,
+    };
+    this.multiplayer = {
+      connected: false,
+      isHost: false,
+      latency: 0,
+      room: null,
+    };
     this.resources = {
       [OWNER.PLAYER]: { ...STARTING_RESOURCES },
       [OWNER.AI]: { ...STARTING_RESOURCES },
@@ -87,6 +104,7 @@ export class SkirmishGame {
     this.assetLibrary = new AssetLibrary({ onWarning: (message) => this.warn(message) });
     this.particles = new ParticleSystem(this.scene, this.terrain);
     this.instancedLod = new InstancedLodRenderer(this.scene);
+    this.setSettings(this.settings);
 
     this.setupScene();
     this.cameraController = new CameraController(this.camera, this.renderer.domElement, this.terrain);
@@ -233,6 +251,7 @@ export class SkirmishGame {
 
   onPointerDown(event) {
     this.audio.unlock();
+    this.audio.startMusic();
     if (event.button === 2) {
       return;
     }
@@ -532,6 +551,7 @@ export class SkirmishGame {
     this.updateTunnels(delta);
     this.updateUnits(delta);
     this.updateCombat(delta);
+    this.audio.setCombatActivity(this.activeCombatCount);
     this.updateSuperweapons(delta);
     this.updateAI(delta);
     this.updateVisibility();
@@ -539,6 +559,10 @@ export class SkirmishGame {
     this.instancedLod.update([...this.entities.values()], this.camera, this.selectedIds);
     this.particles.update(delta, this.camera);
     this.updateHud();
+    if (this.elapsed >= this.nextAutosaveAt) {
+      this.nextAutosaveAt += 300;
+      this.hooks.onAutosave?.(this.exportSave('autosave'));
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -676,6 +700,7 @@ export class SkirmishGame {
   }
 
   updateCombat(delta) {
+    let activeCombat = 0;
     for (const entity of this.entities.values()) {
       if (
         entity.hp <= 0 ||
@@ -696,9 +721,11 @@ export class SkirmishGame {
       if (!target || entity.fireTimer > 0) {
         continue;
       }
+      activeCombat += 1;
       this.dealDamage(entity, target);
       entity.fireTimer = entity.cooldown;
     }
+    this.activeCombatCount = activeCombat;
   }
 
   updateSuperweapons(delta) {
@@ -1247,7 +1274,10 @@ export class SkirmishGame {
     }
     target.hp = -1000;
     this.audio.play('explosion');
-    this.particles.burst(target.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 0xf97316, target.kind === ENTITY_KIND.BUILDING ? 28 : 12);
+    this.particles.destruction(target.position.clone().add(new THREE.Vector3(0, 1.2, 0)), target.factionId, target.kind);
+    if (target.kind === ENTITY_KIND.BUILDING) {
+      this.addRubble(target);
+    }
     this.scene.remove(target.visual);
     this.scene.remove(target.hpBar.group);
     this.scene.remove(target.selectionRing);
@@ -1352,11 +1382,15 @@ export class SkirmishGame {
 
       if (entity.kind === ENTITY_KIND.BUILDING && !entity.completed) {
         const progress = 1 - entity.buildRemaining / entity.buildTime;
+        entity.visual.position.y = entity.position.y - (1 - progress) * 2.4;
         entity.hpBar.fill.material.color.setHex(0xfacc15);
         entity.hpBar.fill.scale.x = Math.max(0.02, progress);
       } else if ((entity.disabledUntil || 0) > this.elapsed) {
         entity.hpBar.fill.material.color.setHex(0x38bdf8);
       } else {
+        if (entity.kind === ENTITY_KIND.BUILDING) {
+          entity.visual.position.y = entity.position.y;
+        }
         entity.hpBar.fill.material.color.setHex(entity.owner === OWNER.PLAYER ? 0x22c55e : 0xef4444);
       }
 
@@ -1493,6 +1527,8 @@ export class SkirmishGame {
       aiAttackIn: Math.max(0, this.ai.nextAttack - this.elapsed),
       difficulty: this.difficulty.name,
       map: this.map.name,
+      multiplayer: this.multiplayer,
+      combatActivity: this.activeCombatCount,
     };
   }
 
@@ -1517,12 +1553,190 @@ export class SkirmishGame {
     };
   }
 
+  exportSave(label = 'manual') {
+    return {
+      version: '1.0.0-beta',
+      label,
+      savedAt: new Date().toISOString(),
+      elapsed: this.elapsed,
+      nextEntityId: this.nextEntityId,
+      options: this.options,
+      settings: this.settings,
+      resources: structuredClone(this.resources),
+      income: structuredClone(this.income),
+      superweaponCooldowns: structuredClone(this.superweaponCooldowns),
+      ai: structuredClone(this.ai),
+      fog: this.fog.serialize(),
+      entities: [...this.entities.values()].filter((entity) => entity.hp > 0).map((entity) => this.serializeForSave(entity)),
+    };
+  }
+
+  loadSave(save) {
+    if (!save?.entities || !save?.options) {
+      throw new Error('Invalid save file');
+    }
+    this.clearEntities();
+    this.elapsed = Number(save.elapsed || 0);
+    this.nextEntityId = Number(save.nextEntityId || 1);
+    this.resources = structuredClone(save.resources || this.resources);
+    this.income = structuredClone(save.income || this.income);
+    this.superweaponCooldowns = structuredClone(save.superweaponCooldowns || this.superweaponCooldowns);
+    this.ai = structuredClone(save.ai || this.createAiState());
+    this.setSettings({ ...this.settings, ...(save.settings || {}) });
+    for (const saved of save.entities) {
+      this.restoreEntity(saved);
+    }
+    this.fog.load(save.fog);
+    this.updateVisibility();
+    this.updateHud();
+    return true;
+  }
+
+  serializeForSave(entity) {
+    return {
+      id: entity.id,
+      kind: entity.kind,
+      defId: entity.defId,
+      owner: entity.owner,
+      factionId: entity.factionId,
+      position: entity.position.toArray(),
+      hp: entity.hp,
+      maxHp: entity.maxHp,
+      completed: entity.completed ?? true,
+      buildRemaining: entity.buildRemaining || 0,
+      buildTime: entity.buildTime || 0,
+      productionQueue: structuredClone(entity.productionQueue || []),
+      rallyPoint: entity.rallyPoint?.toArray(),
+      kills: entity.kills || 0,
+      veteranLevel: entity.veteranLevel || 0,
+      abilityCooldowns: structuredClone(entity.abilityCooldowns || {}),
+      fireTimer: entity.fireTimer || 0,
+      disabledUntil: entity.disabledUntil || 0,
+      shieldUntil: entity.shieldUntil || 0,
+      shieldRemaining: entity.shieldRemaining || 0,
+      cloakedUntil: entity.cloakedUntil || 0,
+    };
+  }
+
+  restoreEntity(saved) {
+    const position = new THREE.Vector3().fromArray(saved.position);
+    const entity =
+      saved.kind === ENTITY_KIND.BUILDING
+        ? this.spawnBuilding(saved.defId, saved.owner, position, { completed: saved.completed })
+        : this.spawnUnit(saved.defId, saved.owner, position);
+    if (!entity) {
+      return null;
+    }
+    this.entities.delete(entity.id);
+    entity.id = saved.id;
+    entity.visual.userData.entityId = entity.id;
+    entity.visual.traverse((node) => {
+      node.userData.entityId = entity.id;
+    });
+    entity.hp = saved.hp;
+    entity.maxHp = saved.maxHp || entity.maxHp;
+    entity.completed = saved.completed ?? entity.completed;
+    entity.buildRemaining = saved.buildRemaining || 0;
+    entity.productionQueue = structuredClone(saved.productionQueue || []);
+    if (saved.rallyPoint && entity.rallyPoint) {
+      entity.rallyPoint.fromArray(saved.rallyPoint);
+    }
+    entity.kills = saved.kills || 0;
+    entity.veteranLevel = saved.veteranLevel || 0;
+    entity.abilityCooldowns = { ...entity.abilityCooldowns, ...(saved.abilityCooldowns || {}) };
+    entity.fireTimer = saved.fireTimer || 0;
+    entity.disabledUntil = saved.disabledUntil || 0;
+    entity.shieldUntil = saved.shieldUntil || 0;
+    entity.shieldRemaining = saved.shieldRemaining || 0;
+    entity.cloakedUntil = saved.cloakedUntil || 0;
+    this.entities.set(entity.id, entity);
+    return entity;
+  }
+
+  clearEntities() {
+    for (const entity of this.entities.values()) {
+      this.scene.remove(entity.visual);
+      this.scene.remove(entity.hpBar?.group);
+      this.scene.remove(entity.selectionRing);
+      if (entity.rankIcon) {
+        this.scene.remove(entity.rankIcon);
+      }
+    }
+    for (const mesh of this.rubble) {
+      this.scene.remove(mesh);
+      mesh.geometry?.dispose();
+      mesh.material?.dispose();
+    }
+    this.rubble = [];
+    this.entities.clear();
+    this.pickables = [];
+    this.selectedIds.clear();
+    this.particles.clear();
+  }
+
+  setSettings(settings = {}) {
+    this.settings = { ...this.settings, ...settings };
+    const quality = this.settings.graphicsQuality || 'high';
+    const presets = {
+      low: { pixelRatio: 1, particles: 220, shadows: false },
+      medium: { pixelRatio: 1.4, particles: 420, shadows: true },
+      high: { pixelRatio: Math.min(window.devicePixelRatio, 2), particles: 760, shadows: true },
+    };
+    const preset = presets[quality] || presets.high;
+    if (this.renderer) {
+      this.renderer.setPixelRatio(preset.pixelRatio);
+      this.renderer.shadowMap.enabled = preset.shadows;
+      this.resize();
+    }
+    this.particles?.setBudget(preset.particles);
+    this.instancedLod?.setQuality(quality);
+    this.audio?.setSettings(this.settings);
+  }
+
+  setMultiplayerState(state = {}) {
+    this.multiplayer = { ...this.multiplayer, ...state };
+  }
+
   runAcceptanceProbe() {
     return this.runMilestoneProbe(false);
   }
 
   runV03AcceptanceProbe() {
     return this.runMilestoneProbe(true);
+  }
+
+  runV10AcceptanceProbe() {
+    const checks = [];
+    const assert = (name, condition, detail = '') => checks.push({ name, pass: Boolean(condition), detail });
+    this.setSettings({ graphicsQuality: 'low', musicVolume: 0.2, sfxVolume: 0.2 });
+    assert('settings apply', this.settings.graphicsQuality === 'low');
+
+    const save = this.exportSave('probe');
+    assert('save export has entities', save.entities.length > 0);
+    const beforeUnits = this.countEntities(OWNER.PLAYER, ENTITY_KIND.UNIT);
+    this.loadSave(save);
+    assert('save load restores unit count', this.countEntities(OWNER.PLAYER, ENTITY_KIND.UNIT) === beforeUnits);
+
+    const baseline = this.exportSave('pre-performance');
+    const unitIds = this.playerData.faction.units.map((unit) => unit.id);
+    const start = performance.now();
+    for (let index = 0; index < 500; index += 1) {
+      const x = -42 + (index % 40) * 1.2;
+      const z = -12 + Math.floor(index / 40) * 1.2;
+      this.spawnUnit(unitIds[index % unitIds.length], OWNER.PLAYER, new THREE.Vector3(x, 0, z));
+    }
+    this.simulateSeconds(2, 1 / 30);
+    const elapsedMs = performance.now() - start;
+    assert('500 unit performance population', this.countEntities(OWNER.PLAYER, ENTITY_KIND.UNIT) >= beforeUnits + 500);
+    assert('500 unit simulation budget', elapsedMs < 9000, `${Math.round(elapsedMs)}ms`);
+    assert('particle budget capped', this.particles.budget <= 760);
+    this.loadSave(baseline);
+
+    return {
+      passed: checks.every((check) => check.pass),
+      checks,
+      snapshot: this.getSnapshot(),
+    };
   }
 
   runMilestoneProbe(includeV03) {
@@ -1883,6 +2097,20 @@ export class SkirmishGame {
     marker.rotation.x = -Math.PI / 2;
     marker.position.copy(this.terrain.placeOnGround(position, 0.06));
     this.scene.add(marker);
+  }
+
+  addRubble(entity) {
+    const color = entity.factionId === 'vorreth' ? 0x31572c : entity.factionId === 'ironveil' ? 0x334155 : 0x64748b;
+    const rubble = new THREE.Mesh(
+      new THREE.BoxGeometry(entity.footprint * 0.75, 0.28, entity.footprint * 0.75),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: entity.factionId === 'vorreth' ? 0.02 : 0.18 }),
+    );
+    rubble.position.copy(this.terrain.placeOnGround(entity.position, 0.08));
+    rubble.rotation.y = Math.random() * Math.PI;
+    rubble.castShadow = true;
+    rubble.receiveShadow = true;
+    this.rubble.push(rubble);
+    this.scene.add(rubble);
   }
 
   warn(message) {

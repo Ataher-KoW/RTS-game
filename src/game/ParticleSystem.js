@@ -6,10 +6,12 @@ export class ParticleSystem {
     this.terrain = terrain;
     this.particles = [];
     this.floaters = [];
+    this.budget = 650;
   }
 
   burst(position, color = 0xffc857, count = 16) {
-    for (let index = 0; index < count; index += 1) {
+    const spawnCount = Math.min(count, Math.max(0, this.budget - this.particles.length));
+    for (let index = 0; index < spawnCount; index += 1) {
       const particle = new THREE.Mesh(
         new THREE.SphereGeometry(0.12, 6, 4),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }),
@@ -48,6 +50,38 @@ export class ParticleSystem {
 
   fire(position) {
     this.burst(position, 0xf97316, 3);
+  }
+
+  destruction(position, factionId = 'synthekon', kind = 'unit') {
+    const colors = {
+      synthekon: [0xe2e8f0, 0x67e8f9, 0x94a3b8],
+      vorreth: [0x84cc16, 0xc084fc, 0x4ade80],
+      ironveil: [0xf97316, 0x334155, 0xfacc15],
+    }[factionId] || [0xf97316, 0x94a3b8, 0xfacc15];
+    this.burst(position, colors[0], kind === 'building' ? 18 : 8);
+    this.burst(position.clone().add(new THREE.Vector3(0, 0.5, 0)), colors[1], kind === 'building' ? 14 : 6);
+    for (let index = 0; index < (kind === 'building' ? 7 : 3); index += 1) {
+      this.smoke(position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2, 0.7, (Math.random() - 0.5) * 2)), 0.8);
+    }
+  }
+
+  setBudget(budget) {
+    this.budget = Math.max(80, Number(budget || this.budget));
+  }
+
+  clear() {
+    for (const particle of this.particles) {
+      this.scene.remove(particle);
+      particle.geometry?.dispose();
+      particle.material?.dispose();
+    }
+    for (const floater of this.floaters) {
+      this.scene.remove(floater);
+      floater.material?.map?.dispose();
+      floater.material?.dispose();
+    }
+    this.particles = [];
+    this.floaters = [];
   }
 
   floatingText(text, position, color = '#e0f2fe') {

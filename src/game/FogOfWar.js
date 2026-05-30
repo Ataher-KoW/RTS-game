@@ -79,6 +79,25 @@ export class FogOfWar {
     return this.visible[cell.z * this.size + cell.x] === 1;
   }
 
+  serialize() {
+    return {
+      size: this.size,
+      explored: Array.from(this.explored),
+      visible: Array.from(this.visible),
+    };
+  }
+
+  load(data = {}) {
+    if (data.size !== this.size || !Array.isArray(data.explored)) {
+      return;
+    }
+    this.explored.set(data.explored.slice(0, this.explored.length));
+    if (Array.isArray(data.visible)) {
+      this.visible.set(data.visible.slice(0, this.visible.length));
+    }
+    this.update([]);
+  }
+
   worldToFog(position) {
     return {
       x: THREE.MathUtils.clamp(Math.floor(((position.x + this.terrain.half) / this.terrain.size) * this.size), 0, this.size - 1),
