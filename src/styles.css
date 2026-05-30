@@ -1,0 +1,193 @@
+:root {
+  color: #e5f1ff;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #071018;
+}
+
+button {
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 6px;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.82);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, 0.72);
+}
+
+.game-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(180deg, rgba(7, 16, 24, 0.3), rgba(7, 16, 24, 0.86)),
+    #071018;
+}
+
+.viewport {
+  position: absolute;
+  inset: 0;
+}
+
+.viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.resource-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(132px, 1fr));
+  gap: 8px;
+  width: min(520px, calc(100% - 24px));
+  transform: translateX(-50%);
+}
+
+.resource-bar div,
+.selection-panel,
+.ability-grid,
+.minimap {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  background: rgba(7, 16, 24, 0.78);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.resource-bar div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.resource-bar span,
+.resource-bar small,
+.eyebrow {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.resource-bar strong {
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.resource-bar small {
+  grid-column: 2;
+  color: #86efac;
+}
+
+.command-bar {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 152px minmax(220px, 1fr) 260px;
+  gap: 10px;
+  align-items: stretch;
+  min-height: 132px;
+}
+
+.minimap {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, 0.28), transparent 45%),
+    radial-gradient(circle at 62% 48%, rgba(168, 85, 247, 0.62) 0 4px, transparent 5px),
+    radial-gradient(circle at 33% 64%, rgba(132, 204, 22, 0.65) 0 3px, transparent 4px),
+    #0f172a;
+}
+
+.minimap::after {
+  position: absolute;
+  inset: 20%;
+  border: 1px solid rgba(226, 232, 240, 0.55);
+  content: "";
+}
+
+.selection-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+}
+
+.selection-panel strong {
+  color: #f8fafc;
+  font-size: 1.1rem;
+}
+
+.health-bar {
+  width: min(320px, 100%);
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.24);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.health-bar span {
+  display: block;
+  width: 84%;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #38bdf8);
+}
+
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+.ability-grid button {
+  min-width: 0;
+  min-height: 52px;
+}
+
+@media (max-width: 760px) {
+  .resource-bar {
+    grid-template-columns: 1fr;
+    width: min(280px, calc(100% - 24px));
+  }
+
+  .command-bar {
+    grid-template-columns: 96px 1fr;
+  }
+
+  .ability-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(58px, 1fr));
+  }
+}
