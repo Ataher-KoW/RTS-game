@@ -1,0 +1,41 @@
+{
+  "name": "at-strategy",
+  "version": "0.1.0",
+  "description": "Sci-fi RTS prototype built with Three.js, Vite, and Electron.",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "concurrently \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && electron .\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "setup": "node scripts/setup-assets.mjs",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "three": "^0.181.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.2.6",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.ataherkow.atstrategy",
+    "productName": "AT Strategy",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
