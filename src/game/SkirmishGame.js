@@ -30,6 +30,7 @@ export class SkirmishGame {
     this.elapsed = 0;
     this.lastFrameDelta = 1 / 60;
     this.matchEnded = false;
+    this.matchResult = null;
     this.nextEntityId = 1;
     this.entities = new Map();
     this.selectedIds = new Set();
@@ -1176,6 +1177,147 @@ export class SkirmishGame {
     return BUILD_ORDER;
   }
 
+  getSnapshot() {
+    const entities = [...this.entities.values()].filter((entity) => entity.hp > 0);
+    return {
+      elapsed: this.elapsed,
+      matchEnded: this.matchEnded,
+      matchResult: this.matchResult,
+      resources: structuredClone(this.resources),
+      income: structuredClone(this.income),
+      playerUnits: entities.filter((entity) => entity.owner === OWNER.PLAYER && entity.kind === ENTITY_KIND.UNIT).length,
+      aiUnits: entities.filter((entity) => entity.owner === OWNER.AI && entity.kind === ENTITY_KIND.UNIT).length,
+      playerBuildings: entities.filter((entity) => entity.owner === OWNER.PLAYER && entity.kind === ENTITY_KIND.BUILDING).length,
+      aiBuildings: entities.filter((entity) => entity.owner === OWNER.AI && entity.kind === ENTITY_KIND.BUILDING).length,
+      playerHqAlive: Boolean(this.findBuilding(OWNER.PLAYER, 'synthekon-hq')),
+      aiHqAlive: Boolean(this.findBuilding(OWNER.AI, 'synthekon-hq')),
+      warnings: this.warnings.slice(-8),
+    };
+  }
+
+  runAcceptanceProbe() {
+    const checks = [];
+    const assert = (name, condition, detail = '') => {
+      checks.push({ name, pass: Boolean(condition), detail });
+    };
+
+    this.updateVisibility();
+    this.updateResources(1);
+    const hq = this.findBuilding(OWNER.PLAYER, 'synthekon-hq');
+    assert('player HQ exists', hq?.completed === true);
+
+    const startingUnits = this.countEntities(OWNER.PLAYER, ENTITY_KIND.UNIT);
+    this.selectEntities([hq.id]);
+    this.queueUnit('scout-drone');
+    assert('HQ queues scout drone', hq.productionQueue.length === 1);
+    this.simulateSeconds(10);
+    assert('queued unit spawns', this.countEntities(OWNER.PLAYER, ENTITY_KIND.UNIT) > startingUnits);
+
+    const foundrySpot = this.findBuildSpotForProbe('android-foundry', OWNER.PLAYER, hq.position);
+    assert('valid foundry build spot found', Boolean(foundrySpot));
+    const foundry = this.placeBuildingForProbe('android-foundry', OWNER.PLAYER, foundrySpot);
+    this.simulateSeconds(this.data.buildings['android-foundry'].buildTime + 1);
+    assert('construction completes', foundry.completed === true);
+
+    const beforeSwarm = this.countUnitsByDef(OWNER.PLAYER, 'android-swarm');
+    this.selectEntities([foundry.id]);
+    this.queueUnit('android-swarm');
+    this.simulateSeconds(this.data.units['android-swarm'].buildTime + 1);
+    assert('production building trains unit', this.countUnitsByDef(OWNER.PLAYER, 'android-swarm') > beforeSwarm);
+
+    const mover = [...this.entities.values()].find((entity) => entity.owner === OWNER.PLAYER && entity.kind === ENTITY_KIND.UNIT && entity.hp > 0);
+    const startPosition = mover.position.clone();
+    this.selectEntities([mover.id]);
+    this.issueMove(startPosition.clone().add(new THREE.Vector3(6, 0, -4)), { attackMove: false });
+    this.simulateSeconds(2.5);
+    assert('move order changes unit position', mover.position.distanceTo(startPosition) > 1);
+
+    const combatTarget = this.spawnUnit('rifle-android', OWNER.AI, mover.position.clone().add(new THREE.Vector3(2.4, 0, 0)));
+    combatTarget.hp = 1;
+    mover.kills = 4;
+    this.selectEntities([mover.id]);
+    this.issueAttack(combatTarget);
+    this.simulateSeconds(2);
+    assert('combat destroys target', combatTarget.hp <= 0);
+    assert('veterancy level gained', mover.veteranLevel >= 1);
+
+    const centerScout = this.spawnUnit('scout-drone', OWNER.PLAYER, new THREE.Vector3(2, 0, 2));
+    const siphonSpot = this.findBuildSpotForProbe('dark-matter-siphon', OWNER.PLAYER, centerScout.position);
+    assert('valid dark matter siphon spot found', Boolean(siphonSpot));
+    const siphon = this.placeBuildingForProbe('dark-matter-siphon', OWNER.PLAYER, siphonSpot, true);
+    const darkBefore = this.resources[OWNER.PLAYER].darkMatter;
+    this.simulateSeconds(6);
+    assert('dark matter income works', siphon.completed && this.resources[OWNER.PLAYER].darkMatter > darkBefore);
+
+    const aiBuildingsBefore = this.countEntities(OWNER.AI, ENTITY_KIND.BUILDING);
+    this.simulateSeconds(95);
+    assert('easy AI builds economy/production', this.countEntities(OWNER.AI, ENTITY_KIND.BUILDING) > aiBuildingsBefore);
+
+    const aiHq = this.findBuilding(OWNER.AI, 'synthekon-hq');
+    aiHq.hp = 1;
+    this.dealDamage(mover, aiHq);
+    assert('enemy HQ destruction wins match', this.matchEnded && this.matchResult === 'victory');
+
+    const passed = checks.every((check) => check.pass);
+    return {
+      passed,
+      checks,
+      snapshot: this.getSnapshot(),
+    };
+  }
+
+  simulateSeconds(seconds, step = 0.2) {
+    const iterations = Math.ceil(seconds / step);
+    for (let index = 0; index < iterations && !this.matchEnded; index += 1) {
+      this.update(Math.min(step, seconds - index * step));
+    }
+  }
+
+  findBuildSpotForProbe(buildingId, owner, origin) {
+    const def = this.data.buildings[buildingId];
+    const searchCenters =
+      buildingId === 'metal-harvester'
+        ? this.terrain.metalDeposits
+        : buildingId === 'dark-matter-siphon'
+          ? this.terrain.darkMatterNodes
+          : [origin];
+
+    for (const center of searchCenters) {
+      for (let radius = 0; radius <= 18; radius += this.terrain.cellSize) {
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 8) {
+          const candidate = this.terrain.snapPosition(
+            center.clone().add(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)),
+          );
+          if (this.canPlaceBuilding(buildingId, candidate, owner)) {
+            return candidate;
+          }
+        }
+      }
+    }
+
+    this.warn(`Probe could not find build spot for ${def?.name ?? buildingId}`);
+    return null;
+  }
+
+  placeBuildingForProbe(buildingId, owner, position, completed = false) {
+    const def = this.data.buildings[buildingId];
+    if (!position || !this.canPlaceBuilding(buildingId, position, owner)) {
+      throw new Error(`No valid probe placement for ${buildingId}`);
+    }
+    this.payCost(owner, def.cost);
+    return this.spawnBuilding(buildingId, owner, position, { completed });
+  }
+
+  countEntities(owner, kind) {
+    return [...this.entities.values()].filter((entity) => entity.owner === owner && entity.kind === kind && entity.hp > 0).length;
+  }
+
+  countUnitsByDef(owner, defId) {
+    return [...this.entities.values()].filter(
+      (entity) => entity.owner === owner && entity.kind === ENTITY_KIND.UNIT && entity.defId === defId && entity.hp > 0,
+    ).length;
+  }
+
   canAfford(owner, cost = {}) {
     return RESOURCE_KEYS.every((key) => (this.resources[owner][key] ?? 0) >= (cost[key] ?? 0));
   }
@@ -1209,6 +1351,7 @@ export class SkirmishGame {
 
   endMatch(result) {
     this.matchEnded = true;
+    this.matchResult = result;
     this.hooks.onGameOver?.({
       result,
       elapsed: this.elapsed,
