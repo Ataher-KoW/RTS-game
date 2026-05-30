@@ -1,9 +1,10 @@
 {
   "name": "at-strategy",
-  "version": "0.3.0",
-  "description": "Sci-fi RTS prototype built with Three.js, Vite, and Electron.",
+  "version": "1.0.0",
+  "description": "AT Strategy sci-fi RTS beta built with Three.js, Vite, and Electron.",
+  "author": "Ataher-KoW",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "dev:electron": "concurrently \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && electron .\"",
@@ -15,8 +16,8 @@
     "test:v0.3": "node scripts/smoke-v0.3.mjs",
     "test:v1": "node scripts/smoke-v1.mjs",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder --dir",
-    "dist:portable": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "dist:portable": "npm run build && electron-builder --win portable"
   },
   "dependencies": {
     "three": "^0.181.2"
@@ -31,7 +32,9 @@
   "build": {
     "appId": "com.ataherkow.atstrategy",
     "productName": "AT Strategy",
+    "asar": true,
     "directories": {
+      "buildResources": "build",
       "output": "release"
     },
     "files": [
@@ -41,8 +44,19 @@
       "package.json"
     ],
     "win": {
-      "target": "portable",
+      "icon": "icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AT Strategy"
     }
   }
 }

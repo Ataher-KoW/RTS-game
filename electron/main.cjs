@@ -1,25 +1,25 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createAtStrategyServer } from '../server/at-strategy-server.mjs';
+const { app, BrowserWindow, ipcMain } = require('electron');
+const { mkdir, readFile, readdir, writeFile } = require('node:fs/promises');
+const path = require('node:path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const isDev = !app.isPackaged;
+const isSmoke = process.env.AT_STRATEGY_ELECTRON_SMOKE === '1';
 let lanServer = null;
 let lanServerInfo = null;
+let serverFactory = null;
 
 async function createWindow() {
+  await markSmoke('main-start');
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 1024,
     minHeight: 640,
+    show: !isSmoke,
     title: 'AT Strategy',
     backgroundColor: '#071018',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -27,18 +27,34 @@ async function createWindow() {
 
   if (isDev) {
     await window.loadURL('http://127.0.0.1:5173');
-    window.webContents.openDevTools({ mode: 'detach' });
+    if (!isSmoke) {
+      window.webContents.openDevTools({ mode: 'detach' });
+    }
     return;
   }
 
+  if (isSmoke) {
+    window.webContents.once('did-finish-load', async () => {
+      await markSmoke('loaded');
+      setTimeout(() => app.quit(), 250);
+    });
+    window.webContents.once('did-fail-load', (_event, code, description) => {
+      console.error(`AT Strategy packaged smoke failed: ${code} ${description}`);
+      app.exit(1);
+    });
+  }
   await window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch(async (error) => {
+  await markSmoke(`error ${error.message}`);
+  app.exit(1);
+});
 
 ipcMain.handle('lan-host:start', async (_event, options = {}) => {
   if (!lanServer) {
-    lanServer = createAtStrategyServer({ port: Number(options.port || 8787), host: '0.0.0.0' });
+    serverFactory ||= (await import('../server/at-strategy-server.mjs')).createAtStrategyServer;
+    lanServer = serverFactory({ port: Number(options.port || 8787), host: '0.0.0.0' });
     lanServerInfo = await lanServer.listen();
   }
   return lanServerInfo;
@@ -92,6 +108,12 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
 async function ensureSaveDir() {
   const dir = path.join(app.getPath('userData'), 'saves');
   await mkdir(dir, { recursive: true });
@@ -102,8 +124,8 @@ function settingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
 }
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+async function markSmoke(stage) {
+  if (process.env.AT_STRATEGY_SMOKE_FILE) {
+    await writeFile(process.env.AT_STRATEGY_SMOKE_FILE, `${stage} ${new Date().toISOString()}\n`, { flag: 'a' });
   }
-});
+}
