@@ -75,7 +75,7 @@ export class InstancedLodRenderer {
 
     const geometryFactory = GEOMETRIES[entity.category] || GEOMETRIES.infantry;
     const material = new THREE.MeshStandardMaterial({
-      color: entity.owner === 'player' ? 0x7dd3fc : 0xf43f5e,
+      color: entity.ownerColor || (entity.owner === 'player' ? 0x7dd3fc : 0xf43f5e),
       roughness: 0.48,
       metalness: 0.22,
     });
