@@ -67,6 +67,11 @@ export function createAtStrategyServer({ host = '0.0.0.0', port = DEFAULT_PORT }
       buffered = Buffer.concat([buffered, chunk]);
       const parsed = decodeFrames(buffered);
       buffered = parsed.remaining;
+      if (parsed.closed) {
+        disconnect(client);
+        socket.end();
+        return;
+      }
       for (const text of parsed.messages) {
         try {
           handleMessage(client, JSON.parse(text));
@@ -311,6 +316,7 @@ function encodeFrame(text) {
 
 function decodeFrames(buffer) {
   const messages = [];
+  let closed = false;
   let offset = 0;
   while (offset + 2 <= buffer.length) {
     const first = buffer[offset];
@@ -340,6 +346,7 @@ function decodeFrames(buffer) {
       break;
     }
     if (opcode === 0x8) {
+      closed = true;
       offset = frameEnd;
       continue;
     }
@@ -355,7 +362,7 @@ function decodeFrames(buffer) {
     }
     offset = frameEnd;
   }
-  return { messages, remaining: buffer.subarray(offset) };
+  return { messages, remaining: buffer.subarray(offset), closed };
 }
 
 function writeJson(response, status, body) {
