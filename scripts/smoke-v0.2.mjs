@@ -52,7 +52,24 @@ try {
   const page = await getPage();
   const cdp = await connectCdp(page.webSocketDebuggerUrl);
   await cdp.send('Runtime.evaluate', {
-    expression: 'document.readyState',
+    expression: `
+      new Promise((resolve) => {
+        const started = performance.now();
+        function check() {
+          if (window.atStrategyGame?.runAcceptanceProbe) {
+            resolve(true);
+            return;
+          }
+          if (performance.now() - started > 20000) {
+            resolve(false);
+            return;
+          }
+          setTimeout(check, 100);
+        }
+        check();
+      })
+    `,
+    awaitPromise: true,
     returnByValue: true,
   });
   const probe = await cdp.send('Runtime.evaluate', {
@@ -60,13 +77,17 @@ try {
     awaitPromise: true,
     returnByValue: true,
   });
+  if (probe.exceptionDetails) {
+    console.error(JSON.stringify(probe.exceptionDetails, null, 2));
+    throw new Error('v0.2 acceptance probe threw in the browser');
+  }
   const value = probe.result?.value;
   const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png' });
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
   cdp.close();
 
   if (!value?.passed) {
-    console.error(JSON.stringify(value, null, 2));
+    console.error(JSON.stringify(value ?? probe, null, 2));
     throw new Error('v0.2 acceptance probe failed');
   }
 
