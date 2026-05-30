@@ -78,7 +78,62 @@ try {
   }
 
   const probe = await cdp.send('Runtime.evaluate', {
-    expression: 'window.atStrategyGame.runV03AcceptanceProbe()',
+    expression: `
+      (async () => {
+        const factions = ['synthekon', 'vorreth', 'ironveil'];
+        const maps = ['fractured-frontier', 'ember-delta', 'void-crater'];
+        const difficulties = ['easy', 'medium', 'hard'];
+        const setupChecks = [];
+        for (const playerFactionId of factions) {
+          for (const aiFactionId of factions) {
+            for (const mapId of maps) {
+              for (const difficultyId of difficulties) {
+                await window.atStrategyGame.startGame({
+                  playerFactionId,
+                  aiFactionId,
+                  mapId,
+                  difficultyId,
+                  hideSetup: true,
+                });
+                const snapshot = window.atStrategyGame.snapshot();
+                setupChecks.push({
+                  playerFactionId,
+                  aiFactionId,
+                  mapId,
+                  difficultyId,
+                  passed:
+                    snapshot.options.playerFactionId === playerFactionId &&
+                    snapshot.options.aiFactionId === aiFactionId &&
+                    snapshot.options.mapId === mapId &&
+                    snapshot.options.difficultyId === difficultyId &&
+                    snapshot.playerHqAlive &&
+                    snapshot.aiHqAlive,
+                });
+              }
+            }
+          }
+        }
+
+        const probeCases = [
+          { name: 'synthekon-easy-frontier', playerFactionId: 'synthekon', aiFactionId: 'synthekon', mapId: 'fractured-frontier', difficultyId: 'easy' },
+          { name: 'vorreth-medium-delta', playerFactionId: 'vorreth', aiFactionId: 'ironveil', mapId: 'ember-delta', difficultyId: 'medium' },
+          { name: 'ironveil-hard-crater', playerFactionId: 'ironveil', aiFactionId: 'vorreth', mapId: 'void-crater', difficultyId: 'hard' },
+        ];
+        const results = [];
+        for (const probeCase of probeCases) {
+          await window.atStrategyGame.startGame({ ...probeCase, hideSetup: true });
+          results.push({
+            name: probeCase.name,
+            result: await window.atStrategyGame.runV03AcceptanceProbe(),
+          });
+        }
+        return {
+          passed: setupChecks.every((check) => check.passed) && results.every((entry) => entry.result?.passed),
+          setupChecks,
+          results,
+        };
+      })()
+    `,
     awaitPromise: true,
     returnByValue: true,
   });
@@ -175,7 +230,7 @@ async function connectCdp(url) {
         const timer = setTimeout(() => {
           callbacks.delete(id);
           reject(new Error(`CDP timeout: ${method}`));
-        }, 60000);
+        }, 300000);
         callbacks.set(id, {
           resolve: (value) => {
             clearTimeout(timer);

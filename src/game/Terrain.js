@@ -78,8 +78,9 @@ export class Terrain {
     if (this.terrainSeed === 2) {
       const channels = Math.sin((x + z) * 0.08) * 0.95 - Math.cos(z * 0.16) * 0.55;
       const deltaBasin = Math.exp(-(x ** 2) / 180) * -0.9;
+      const darkMatterIsland = Math.exp(-(x ** 2 + z ** 2) / 120) * 1.4;
       const shelves = Math.sin(x * 0.11) * 0.35 + Math.cos(z * 0.09) * 0.35;
-      base = channels + deltaBasin + shelves - 0.2;
+      base = channels + deltaBasin + darkMatterIsland + shelves - 0.2;
     } else if (this.terrainSeed === 3) {
       const crater = Math.exp(-(x ** 2 + z ** 2) / 190) * -2.0;
       const rim = Math.exp(-Math.abs(Math.hypot(x, z) - 22) / 8) * 1.35;

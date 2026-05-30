@@ -624,14 +624,15 @@ export class SkirmishGame {
 
   updateTunnels(delta) {
     for (const entity of this.entities.values()) {
-      if (entity.hp <= 0) {
-        continue;
-      }
       if (entity.inTunnel) {
         entity.tunnelRemaining -= delta;
         if (entity.tunnelRemaining <= 0) {
           this.exitTunnel(entity);
         }
+        continue;
+      }
+      if (entity.hp <= 0) {
+        continue;
       }
       if (entity.expiresAt && this.elapsed >= entity.expiresAt) {
         this.killEntity(entity, null);
@@ -1073,7 +1074,7 @@ export class SkirmishGame {
   }
 
   issueMove(point, { attackMove = false } = {}) {
-    const units = this.getSelected().filter((entity) => entity.kind === ENTITY_KIND.UNIT && !entity.inTunnel);
+    const units = this.getSelected().filter((entity) => entity.kind === ENTITY_KIND.UNIT && entity.hp > 0 && !entity.inTunnel);
     if (units.length === 0) {
       return;
     }
@@ -1102,16 +1103,18 @@ export class SkirmishGame {
     }
   }
 
-  issueTunnelEnter(entrance) {
+  issueTunnelEnter(entrance, preferredExit = null) {
     const units = this.getSelected().filter((entity) => entity.kind === ENTITY_KIND.UNIT && !entity.inTunnel);
     const exits = this.getTunnelEntrances(entrance.owner).filter((candidate) => candidate.id !== entrance.id);
     if (units.length === 0 || exits.length === 0) {
       this.audio.play('denied');
       return;
     }
-    const exit = exits.sort((a, b) => b.position.distanceTo(entrance.position) - a.position.distanceTo(entrance.position))[0];
+    const exit = exits.includes(preferredExit)
+      ? preferredExit
+      : exits.sort((a, b) => b.position.distanceTo(entrance.position) - a.position.distanceTo(entrance.position))[0];
     for (const unit of units) {
-      const distance = unit.position.distanceTo(exit.position);
+      const distance = entrance.position.distanceTo(exit.position);
       unit.inTunnel = true;
       unit.tunnelExitId = exit.id;
       unit.tunnelRemaining = Math.max(2.5, distance / TUNNEL_SPEED);
@@ -1119,6 +1122,12 @@ export class SkirmishGame {
       unit.hpBar.group.visible = false;
       unit.selectionRing.visible = false;
       unit.order = null;
+      unit.targetId = null;
+      for (const entity of this.entities.values()) {
+        if (entity.targetId === unit.id) {
+          entity.targetId = null;
+        }
+      }
     }
     this.audio.play('move');
     this.warn(`${units.length} unit(s) entered tunnel network`);
@@ -1218,6 +1227,9 @@ export class SkirmishGame {
   }
 
   applyDamage(attacker, target, amount) {
+    if (target.inTunnel || target.hp <= 0) {
+      return;
+    }
     if (target.shieldRemaining > 0 && (target.shieldUntil || 0) > this.elapsed) {
       const absorbed = Math.min(target.shieldRemaining, amount);
       target.shieldRemaining -= absorbed;
@@ -1580,11 +1592,19 @@ export class SkirmishGame {
         this.findBuildSpotForProbe(this.playerData.roles.tunnel, OWNER.PLAYER, this.terrain.tunnelAnchors.at(-1)),
         true,
       );
-      this.selectEntities([mover.id]);
-      this.issueTunnelEnter(tunnelA);
-      assert('unit enters tunnel', mover.inTunnel === true);
-      this.simulateSeconds(6);
-      assert('unit exits tunnel network', mover.inTunnel === false && mover.position.distanceTo(tunnelB.position) < 8);
+      const tunnelMover =
+        mover.hp > 0
+          ? mover
+          : this.spawnUnit(this.playerData.faction.units[0].id, OWNER.PLAYER, tunnelA.position.clone().add(new THREE.Vector3(1.5, 0, 1.5)));
+      this.selectEntities([tunnelMover.id]);
+      this.issueTunnelEnter(tunnelA, tunnelB);
+      assert('unit enters tunnel', tunnelMover.inTunnel === true);
+      this.simulateSeconds(10);
+      assert(
+        'unit exits tunnel network',
+        tunnelMover.inTunnel === false && tunnelMover.hp > 0 && tunnelMover.position.distanceTo(tunnelB.position) < 8,
+        `${tunnelMover.inTunnel}:${tunnelMover.hp.toFixed(1)}:${(tunnelMover.tunnelRemaining ?? 0).toFixed(2)}:${tunnelMover.position.distanceTo(tunnelB.position).toFixed(2)}`,
+      );
 
       const abilityUnit = this.spawnAbilityProbeUnit(OWNER.PLAYER);
       assert('ability unit available', Boolean(abilityUnit));
@@ -1608,7 +1628,10 @@ export class SkirmishGame {
 
     const aiHq = this.findBuilding(OWNER.AI, this.aiData.roles.hq);
     aiHq.hp = 1;
-    this.dealDamage(mover, aiHq);
+    const victoryAttacker =
+      [...this.entities.values()].find((entity) => entity.owner === OWNER.PLAYER && entity.kind === ENTITY_KIND.UNIT && entity.hp > 0 && !entity.inTunnel) ||
+      this.spawnUnit(this.playerData.faction.units[0].id, OWNER.PLAYER, hq.position.clone().add(new THREE.Vector3(3, 0, 3)));
+    this.dealDamage(victoryAttacker, aiHq);
     assert('enemy HQ destruction wins match', this.matchEnded && this.matchResult === 'victory');
 
     return {
