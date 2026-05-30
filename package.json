@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "setup": "node scripts/setup-assets.mjs",
     "test:v0.2": "node scripts/smoke-v0.2.mjs",
+    "test:v0.3": "node scripts/smoke-v0.3.mjs",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --dir",
     "dist:portable": "npm run build && electron-builder"

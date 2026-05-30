@@ -88,6 +88,12 @@ async function collectAssetTargets() {
         keyword: building.assetKeyword,
       });
     }
+    targets.push({
+      id: `${faction.id}-tunnel-entrance`,
+      kind: 'building',
+      faction: faction.id,
+      keyword: `${faction.name} underground tunnel entrance sci fi glb`,
+    });
   }
   return targets;
 }

@@ -364,7 +364,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 window.atStrategyGame = {
-  current: null,
+  current: game,
   startGame,
   get state() {
     return latestState;
