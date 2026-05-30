@@ -51,6 +51,7 @@ try {
   await waitForHttp(`http://127.0.0.1:${cdpPort}/json`, 25000);
   const page = await getPage();
   const cdp = await connectCdp(page.webSocketDebuggerUrl);
+  await delay(2000);
   await cdp.send('Runtime.evaluate', {
     expression: `
       new Promise((resolve) => {
