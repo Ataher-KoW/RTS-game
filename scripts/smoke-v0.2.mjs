@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -9,12 +10,12 @@ const screenshotPath = path.join(cacheDir, 'v0.2-acceptance.png');
 const viteUrl = 'http://127.0.0.1:5174/';
 const cdpPort = 9223;
 const chromePath = findChrome();
-const npmPath = 'C:\\Program Files\\nodejs\\npm.cmd';
+const viteBin = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js');
 
 await mkdir(cacheDir, { recursive: true });
 await rm(chromeProfile, { recursive: true, force: true });
 
-const vite = spawn(npmPath, ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5174'], {
+const vite = spawn(process.execPath, [viteBin, '--host', '127.0.0.1', '--port', '5174'], {
   cwd: root,
   windowsHide: true,
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -84,10 +85,8 @@ function findChrome() {
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   ];
   for (const candidate of candidates) {
-    try {
+    if (existsSync(candidate)) {
       return candidate;
-    } catch {
-      // Keep the fallback loop simple for Windows installs.
     }
   }
   return candidates[0];
