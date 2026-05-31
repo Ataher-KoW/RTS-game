@@ -1,21 +1,28 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const { mkdir, readFile, readdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 
 const isDev = !app.isPackaged;
 const isSmoke = process.env.AT_STRATEGY_ELECTRON_SMOKE === '1';
+const keepSmokeOpen = process.env.AT_STRATEGY_SMOKE_KEEP_OPEN === '1';
 let lanServer = null;
 let lanServerInfo = null;
 let serverFactory = null;
 
+if (process.env.AT_STRATEGY_REMOTE_DEBUGGING_PORT) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.AT_STRATEGY_REMOTE_DEBUGGING_PORT);
+}
+
 async function createWindow() {
   await markSmoke('main-start');
+  Menu.setApplicationMenu(null);
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 1024,
     minHeight: 640,
     show: !isSmoke,
+    autoHideMenuBar: true,
     title: 'AT Strategy',
     backgroundColor: '#071018',
     webPreferences: {
@@ -36,7 +43,9 @@ async function createWindow() {
   if (isSmoke) {
     window.webContents.once('did-finish-load', async () => {
       await markSmoke('loaded');
-      setTimeout(() => app.quit(), 250);
+      if (!keepSmokeOpen) {
+        setTimeout(() => app.quit(), 250);
+      }
     });
     window.webContents.once('did-fail-load', (_event, code, description) => {
       console.error(`AT Strategy packaged smoke failed: ${code} ${description}`);
