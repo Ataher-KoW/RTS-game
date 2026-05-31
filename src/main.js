@@ -18,6 +18,7 @@ app.innerHTML = `
   <main class="game-shell">
     <section class="setup-panel" id="setupPanel">
       <div>
+        <img class="brand-logo" src="/logo.svg" alt="AT Strategy logo">
         <span class="eyebrow">Skirmish Setup</span>
         <strong>AT Strategy</strong>
         <label>Player Faction<select id="playerFaction"></select></label>

@@ -20,36 +20,123 @@ await testBrowserReleaseProbe();
 async function testMultiplayerProtocol() {
   const server = createAtStrategyServer({ host: '127.0.0.1', port: 8793 });
   await server.listen();
-  const host = await openWs('ws://127.0.0.1:8793');
-  const guest = await openWs('ws://127.0.0.1:8793');
   try {
-    host.sendJson({
-      type: 'lobby:create',
+    const health = await (await fetch('http://127.0.0.1:8793/health')).json();
+    assert('multiplayer health endpoint is live', health.ok && health.name.includes('AT Strategy'));
+
+    await runRoomScenario({
+      format: '1v1',
+      mapId: 'fractured-frontier',
+      seed: 42,
+      players: [
+        { name: 'Host 1v1', factionId: 'synthekon', color: '#38bdf8', team: 1, ready: true },
+        { name: 'Guest 1v1', factionId: 'ironveil', color: '#f97316', team: 2, ready: true },
+      ],
+    });
+
+    await runRoomScenario({
       format: '2v2',
       mapId: 'void-crater',
-      player: { name: 'Host', factionId: 'synthekon', color: '#38bdf8', ready: true },
+      seed: 84,
+      players: [
+        { name: 'Blue', factionId: 'synthekon', color: '#38bdf8', team: 1, ready: true },
+        { name: 'Green', factionId: 'vorreth', color: '#84cc16', team: 1, ready: true },
+        { name: 'Orange', factionId: 'ironveil', color: '#f97316', team: 2, ready: true },
+        { name: 'Purple', factionId: 'synthekon', color: '#a855f7', team: 2, ready: true },
+      ],
     });
-    const joined = await host.waitFor((message) => message.type === 'lobby:joined');
-    const roomId = joined.room.id;
-    guest.sendJson({
-      type: 'lobby:join',
-      roomId,
-      player: { name: 'Guest', factionId: 'vorreth', color: '#84cc16', ready: true },
+
+    await runRoomScenario({
+      format: 'ffa',
+      mapId: 'obsidian-ridge',
+      seed: 126,
+      updatePlayer: true,
+      players: [
+        { name: 'Alpha', factionId: 'synthekon', color: '#38bdf8', team: 1, ready: true },
+        { name: 'Beta', factionId: 'vorreth', color: '#84cc16', team: 2, ready: true },
+        { name: 'Gamma', factionId: 'ironveil', color: '#f97316', team: 3, ready: true },
+        { name: 'Delta', factionId: 'vorreth', color: '#a855f7', team: 4, ready: true },
+      ],
     });
-    await guest.waitFor((message) => message.type === 'lobby:joined');
-    host.sendJson({ type: 'match:start', seed: 42 });
-    await guest.waitFor((message) => message.type === 'match:start');
-    guest.sendJson({ type: 'match:input', tick: 12, input: { command: 'move', ids: [1], x: 4, z: 4 } });
-    await host.waitFor((message) => message.type === 'match:input' && message.tick === 12);
-    host.sendJson({ type: 'match:state', tick: 13, state: { sentAt: Date.now(), resources: { metal: 100 } } });
-    await guest.waitFor((message) => message.type === 'match:state' && message.tick === 13);
-    guest.close();
-    await host.waitFor((message) => message.type === 'match:ai-takeover');
-    console.log('Multiplayer protocol smoke: passed');
+
+    console.log('Multiplayer protocol smoke: passed (health, 1v1, 2v2, FFA, lobby capacity, state relay, AI takeover)');
   } finally {
-    host.close();
-    guest.close();
     await server.close();
+  }
+
+  async function runRoomScenario({ format, mapId, seed, players, updatePlayer = false }) {
+    const url = 'ws://127.0.0.1:8793';
+    const clients = await Promise.all(players.map(() => openWs(url)));
+    const host = clients[0];
+    try {
+      await Promise.all(clients.map((client) => client.waitFor((message) => message.type === 'server:welcome')));
+
+      host.sendJson({ type: 'lobby:list' });
+      await host.waitFor((message) => message.type === 'lobby:list');
+
+      host.sendJson({ type: 'lobby:create', format, mapId, player: players[0] });
+      const joined = await host.waitFor((message) => message.type === 'lobby:joined' && message.room.format === format);
+      const roomId = joined.room.id;
+
+      for (let index = 1; index < clients.length; index += 1) {
+        clients[index].sendJson({ type: 'lobby:join', roomId, player: players[index] });
+        await clients[index].waitFor((message) => message.type === 'lobby:joined' && message.room.id === roomId);
+      }
+
+      const roomUpdate = await host.waitFor(
+        (message) => message.type === 'lobby:update' && message.room.id === roomId && message.room.players.length === players.length,
+      );
+      assert(`${format} room has expected player count`, roomUpdate.room.players.length === players.length);
+      assert(`${format} room keeps selected map`, roomUpdate.room.mapId === mapId);
+      for (const player of players) {
+        const publicPlayer = roomUpdate.room.players.find((candidate) => candidate.name === player.name);
+        assert(`${format} preserves faction for ${player.name}`, publicPlayer?.factionId === player.factionId);
+        assert(`${format} preserves color for ${player.name}`, publicPlayer?.color === player.color);
+      }
+
+      if (updatePlayer) {
+        clients[1].sendJson({
+          type: 'lobby:update-player',
+          player: { ...players[1], name: 'Beta Updated', factionId: 'ironveil', color: '#facc15' },
+        });
+        await host.waitFor(
+          (message) =>
+            message.type === 'lobby:update' &&
+            message.room.players.some(
+              (player) => player.name === 'Beta Updated' && player.factionId === 'ironveil' && player.color === '#facc15',
+            ),
+        );
+      }
+
+      const overflow = await openWs(url);
+      try {
+        await overflow.waitFor((message) => message.type === 'server:welcome');
+        overflow.sendJson({
+          type: 'lobby:join',
+          roomId,
+          player: { name: 'Overflow', factionId: 'synthekon', color: '#ffffff', ready: true },
+        });
+        await overflow.waitFor((message) => message.type === 'server:error' && message.message === 'Room is full');
+      } finally {
+        overflow.close();
+      }
+
+      host.sendJson({ type: 'match:start', seed });
+      await Promise.all(clients.map((client) => client.waitFor((message) => message.type === 'match:start' && message.seed === seed)));
+
+      clients.at(-1).sendJson({ type: 'match:input', tick: seed, input: { command: 'move', ids: [1], x: seed % 9, z: 4 } });
+      await host.waitFor((message) => message.type === 'match:input' && message.tick === seed);
+
+      host.sendJson({ type: 'match:state', tick: seed + 1, state: { sentAt: Date.now(), resources: { metal: seed } } });
+      await Promise.all(clients.slice(1).map((client) => client.waitFor((message) => message.type === 'match:state' && message.tick === seed + 1)));
+
+      clients.at(-1).close();
+      await host.waitFor((message) => message.type === 'match:ai-takeover');
+    } finally {
+      for (const client of clients) {
+        client.close();
+      }
+    }
   }
 }
 
@@ -204,6 +291,12 @@ function findChrome() {
     }
   }
   return candidates[0];
+}
+
+function assert(name, condition) {
+  if (!condition) {
+    throw new Error(`Smoke assertion failed: ${name}`);
+  }
 }
 
 async function waitForHttp(url, timeoutMs, getOutput) {
